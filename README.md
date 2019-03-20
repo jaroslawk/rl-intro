@@ -1,6 +1,10 @@
-# Introduction to reinforcement learning
 
-TODO  add description
+#  Introduction to reinforcement learning
 
+Build image by executing::
 
-docker run -p 8888:8888 -v /Users/jaroslaw/code/rl-intro:/home/jovyan/work  jupyterhub/singleuser
+```
+docker build ./docker-image -t rl-intro-image
+docker run -p 8888:8888 -v $HOME/code/rl-intro:/home/jovyan/work  rl-intro-image:latest
+```
+
