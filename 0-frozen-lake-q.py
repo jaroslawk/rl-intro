@@ -1,23 +1,24 @@
 import itertools
 import random
-import sys
 
 import gym
-import matplotlib
 import numpy as np
-from lib import plotting
 
-env = gym.envs.make('FrozenLake-v0')
+import matplotlib.pyplot as plt
 
-Q = np.zeros([16, 4])
+state_size = 16
+action_size = 4
+
+gamma = 0.95  # Discounting rate
+learning_rate = 0.8
+
+epsilon_start = 1.0
+epsilon_min = 0.01
+
+Q = np.zeros([state_size, action_size])
 
 
-def setup_agent(state_size, action_size):
-    gamma = 0.95  # Discounting rate
-    learning_rate = 0.8
-
-    epsilon_start = 1.0
-    epsilon_min = 0.01
+def setup_agent():
     epsilon_decay = (epsilon_start - epsilon_min) / 50000
     curr_epsilon = epsilon_start
 
@@ -26,29 +27,26 @@ def setup_agent(state_size, action_size):
         if curr_epsilon > epsilon_min:
             curr_epsilon -= epsilon_decay
 
-    def should_explore_fn():
+    def should_explore():
         return np.random.rand() <= curr_epsilon
 
-    def policy(state, explore_fn=should_explore_fn):
-        if explore_fn():
+    def policy_fn(state):
+        if should_explore():
             return random.randrange(action_size)
         return np.argmax(Q[state, :])
 
-    def update_agent(state, action, reward, next_state, done):
+    def update_fn(state, action, reward, next_state, done):
         Q[state, action] = Q[state, action] + learning_rate * (
                 reward + gamma * np.max(Q[next_state, :]) - Q[state, action])
         update_epsilon()
         return curr_epsilon
 
-    return policy, update_agent
-
-
-policy_fn, update_agent_fn = setup_agent(16, 4)
+    return policy_fn, update_fn
 
 
 def learning(env, policy_fn, update_agent_fn, num_episodes, render=False):
     rewards = []
-    for i_episode in range(num_episodes):
+    for _ in range(num_episodes):
 
         state = env.reset()
         reward_sum = 0
@@ -73,14 +71,17 @@ def learning(env, policy_fn, update_agent_fn, num_episodes, render=False):
     return rewards
 
 
-r = learning(env, policy_fn, update_agent_fn, 5000)
+environment = gym.envs.make('FrozenLake-v0')
 
-env.reset()
-learning(env, policy_fn, update_agent_fn, 5, True)
-env.close()
+policy, update_agent = setup_agent()
+rewards = learning(environment, policy, update_agent, 5000)
 
-import matplotlib.pyplot as plt
+# lets play using Q values
+environment.reset()
+learning(environment, policy, update_agent, 5, True)
+environment.close()
 
-plt.plot(np.array(r))
-plt.ylabel('reward over time')
+plt.plot(np.array(rewards))
+plt.ylabel('reward')
+plt.xlabel('episode played')
 plt.show()
