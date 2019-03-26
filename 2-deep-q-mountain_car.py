@@ -8,11 +8,6 @@ import matplotlib
 
 # matplotlib.use("TkAgg")
 
-from lib import plotting
-
-if "./lib" not in sys.path:
-    sys.path.append("./lib")
-
 matplotlib.style.use('ggplot')
 env = gym.envs.make("MountainCar-v0")
 

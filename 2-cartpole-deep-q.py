@@ -23,13 +23,17 @@ def build_model(state_size, action_size, learning_rate=0.001):
     return model
 
 
-def setup_agent(action_size, state_size, load_model=False, epsilon_decay_rate=0.995, epsilon_start=1.0,
+def setup_agent(action_size, state_size, show_mode=False, model_weights_path='save_model/cartpole_0.pkl',
+                epsilon_decay_rate=0.995, epsilon_start=1.0,
                 epsilon_min=0.001):
+
     curr_epsilon = epsilon_start
     memory = deque(maxlen=1000000)
     model = build_model(state_size, action_size)
-    if load_model:
-        model.load_weights('carpool_0.pkl')
+
+    if show_mode:
+        curr_epsilon = 0
+        model.load_weights(model_weights_path)
 
     def update_epsilon():
         nonlocal curr_epsilon
@@ -65,17 +69,16 @@ def setup_agent(action_size, state_size, load_model=False, epsilon_decay_rate=0.
         return curr_epsilon
 
     def save_model():
-        model.save_weights('carpool_0.pkl')
+        model.save_weights(model_weights_path)
 
     return policy_fn, update_fn, save_model
 
 
-def learning(num_episodes, render=False, load_model=False):
+def learning(num_episodes, show_mode=False):
     env = gym.envs.make('CartPole-v1')
     state_size = env.observation_space.shape[0]
 
-    # model.load_weights('carpool.pkl')
-    policy_fn, update_agent_fn, save_model = setup_agent(env.action_space.n, state_size, load_model)
+    policy_fn, update_agent_fn, save_model = setup_agent(env.action_space.n, state_size, show_mode)
 
     def reformat_state(state):
         return np.reshape(state, [1, state_size])
@@ -88,7 +91,7 @@ def learning(num_episodes, render=False, load_model=False):
 
         for st in itertools.count():
 
-            if render:
+            if show_mode:
                 env.render()
 
             action = policy_fn(state)
@@ -108,11 +111,9 @@ def learning(num_episodes, render=False, load_model=False):
                 rewards.append(reward_sum)
                 break
 
-            if ep % 50 == 0:
-                save_model()
+        if ep % 10 == 0:
+            save_model()
 
-        if reward_sum > 120:
-            break
 
     return rewards
 
@@ -125,4 +126,4 @@ plt.xlabel('episode played')
 plt.show()
 
 # lets play using learned model
-learning(num_episodes=3, render=True, load_model=True)
+learning(num_episodes=60, show_mode=True)
