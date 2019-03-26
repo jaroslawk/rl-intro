@@ -13,7 +13,7 @@ from keras.optimizers import Adam
 matplotlib.style.use('ggplot')
 
 
-def build_model(state_size, action_size, learning_rate=0.007):
+def build_model(state_size, action_size, learning_rate=0.001):
     model = Sequential()
     model.add(Dense(24, input_dim=state_size, activation='relu'))
     model.add(Dense(24, activation='relu'))
@@ -23,17 +23,20 @@ def build_model(state_size, action_size, learning_rate=0.007):
     return model
 
 
-def setup_agent(action_size, epsilon_decay_rate=0.998, epsilon_start=1.0, epsilon_min=0.01):
+def setup_agent(action_size, state_size, load_model=False, epsilon_decay_rate=0.995, epsilon_start=1.0,
+                epsilon_min=0.001):
     curr_epsilon = epsilon_start
-
-    memory = deque(maxlen=10000)
+    memory = deque(maxlen=1000000)
+    model = build_model(state_size, action_size)
+    if load_model:
+        model.load_weights('carpool_0.pkl')
 
     def update_epsilon():
         nonlocal curr_epsilon
         curr_epsilon *= epsilon_decay_rate
         curr_epsilon = max(epsilon_min, curr_epsilon)
 
-    def train_replay(batch_size=65, discount_factor=0.95):
+    def train_replay(batch_size=20, discount_factor=0.95):
 
         if len(memory) < batch_size:
             return
@@ -61,10 +64,18 @@ def setup_agent(action_size, epsilon_decay_rate=0.998, epsilon_start=1.0, epsilo
 
         return curr_epsilon
 
-    return policy_fn, update_fn
+    def save_model():
+        model.save_weights('carpool_0.pkl')
+
+    return policy_fn, update_fn, save_model
 
 
-def learning(env, policy_fn, update_agent_fn, num_episodes, render=False):
+def learning(num_episodes, render=False, load_model=False):
+    env = gym.envs.make('CartPole-v1')
+    state_size = env.observation_space.shape[0]
+
+    # model.load_weights('carpool.pkl')
+    policy_fn, update_agent_fn, save_model = setup_agent(env.action_space.n, state_size, load_model)
 
     def reformat_state(state):
         return np.reshape(state, [1, state_size])
@@ -97,27 +108,21 @@ def learning(env, policy_fn, update_agent_fn, num_episodes, render=False):
                 rewards.append(reward_sum)
                 break
 
-        if ep % 50 == 0:
-            model.save_weights('carpool_0.pkl')
+            if ep % 50 == 0:
+                save_model()
+
+        if reward_sum > 120:
+            break
 
     return rewards
 
 
-environment = gym.envs.make('CartPole-v1')
-state_size = environment.observation_space.shape[0]
+r = learning(num_episodes=60)
 
-model = build_model(state_size, environment.action_space.n, state_size)
-# model.load_weights('carpool2.pkl')
-policy, update_agent = setup_agent(environment.action_space.n)
-rewards = learning(environment, policy, update_agent, 120, False)
-
-# lets play using learned model
-# environment.reset()
-# learning(environment, policy, update_agent, 5, True)
-# environment.close()
-
-plt.plot(np.array(rewards))
+plt.plot(np.array(r))
 plt.ylabel('reward')
 plt.xlabel('episode played')
 plt.show()
-1==1
+
+# lets play using learned model
+learning(num_episodes=3, render=True, load_model=True)
